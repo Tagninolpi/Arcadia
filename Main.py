@@ -10,10 +10,22 @@ keep_alive()
 class ArcadiaBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
-        intents.guilds = True  # required for slash commands
+        intents.guilds = True
         super().__init__(command_prefix="/", intents=intents)
 
     async def setup_hook(self):
+        # Load all cogs dynamically
+        cogs = [
+            "cogs.main_menu",
+            # Add more cogs here later
+        ]
+        for cog in cogs:
+            try:
+                await self.load_extension(cog)
+                print(f"✅ Loaded cog: {cog}")
+            except Exception as e:
+                print(f"❌ Failed to load cog {cog}: {e}")
+
         # Sync slash commands globally
         await self.tree.sync()
         print("✅ Slash commands synced globally")
