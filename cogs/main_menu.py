@@ -8,7 +8,7 @@ class MainMenu(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="main_menu", description="Open the main menu")
+    @app_commands.command(name="arcadia", description="Open the main menu")
     async def main_menu(self, interaction: discord.Interaction):
         # Example response
         await interaction.response.send_message("Welcome to Arcadia! 🎮", ephemeral=True)
