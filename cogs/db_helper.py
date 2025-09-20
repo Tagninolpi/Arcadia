@@ -12,16 +12,16 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 def get_games():
     """
     Fetch all games from the table and format them as a list of dictionaries.
-    Each dict contains: id, game_name, active_players, waiting_players, game_state, updated_at
     """
     response = supabase.table("games").select("*").execute()
-    if response.error:
-        print("Error fetching games:", response.error)
+    
+    # Supabase client v1+ returns a dict-like object
+    if response.get("error"):
+        print("Error fetching games:", response["error"])
         return []
 
-    # Format each game nicely
     games_list = []
-    for game in response.data:
+    for game in response.get("data", []):
         games_list.append({
             "id": game["id"],
             "game_name": game["game_name"],
@@ -31,6 +31,7 @@ def get_games():
             "updated_at": game["updated_at"]
         })
     return games_list
+
 
 
 def update_game(game_id: int, active_players=None, waiting_players=None, game_state=None):
