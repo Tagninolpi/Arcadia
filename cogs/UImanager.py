@@ -113,7 +113,7 @@ class MenuViews:
     MENU_BUTTONS_CONFIG = {
         "main_menu": ["Join", "Create", "Exit"],
         "join": [],  # filled dynamically with game names + Back
-        "create": ["Game1", "Game2", "Game3", "Main_Menu", "Exit"]  # list game types
+        "create": ["connect4", "tic tac toe", "battleship", "hangman", "Exit"]  # list game types
     }
 
     # ---------------- Embed Getter ------------------
