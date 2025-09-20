@@ -39,7 +39,7 @@ class MainMenu(commands.Cog):
         players[user.id]["name"] = user.display_name or user.name
 
         # Send main menu embed + buttons
-        from UImanager import MenuViews
+        from .UImanager import MenuViews
         embed = MenuViews.get_embed(user.id)
         view = MenuViews.get_view(user.id)
         await interaction.response.send_message(
