@@ -1,0 +1,25 @@
+/arcadia 
+embed :
+Welcome...
+buttons : 
+join + create + exit buttons
+
+join => if no active game : say no active game you need to create one
+if every game full: say all games lobbies full, you can create a new one
+if able to join show game menu :
+
+game menu : list of all game names, color if joinable
+if joinable click button to join if play you join, if not you can leave and not join
+if not joinable you can spectate
+
+if end or inactive for 2 days end, 
+show the result for 1 day befor real delete or until all participants see inactive
+
+create => show menu of all available games
+click on one to start and when you do first move it is official
+
+if 2 people agree to draw it's a draw
+
+exit => close view + delete innstance in players and db if not in a game
+
+data base , 
