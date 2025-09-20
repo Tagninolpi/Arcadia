@@ -50,8 +50,8 @@ class ArcadiaBot(commands.Bot):
         logger.info(f"Connected to {len(self.guilds)} guild(s)")
 
         # Announce in your guild
-        guild_id = 1096028646323527740
-        channel_id = 1407094852709253302
+        guild_id = 1369005976195436667
+        channel_id = 1403721090622160977
         user_id = 1360749637299998870
 
         guild = self.get_guild(guild_id)
