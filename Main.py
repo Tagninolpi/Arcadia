@@ -25,7 +25,7 @@ class ArcadiaBot(commands.Bot):
 
     async def setup_hook(self):
         cogs = [
-            "cogs.main_menu",  # add more cogs here
+            "main_menu",  # add more cogs here
         ]
         for cog in cogs:
             try:
