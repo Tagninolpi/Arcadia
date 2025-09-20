@@ -1,6 +1,6 @@
 import discord
 from discord.ui import Button, View
-from main_menu import players  # your players dict
+from .main_menu import players  # your players dict
 
 # ---------------- Embed Functions ----------------
 def main_menu_embed(user_id: int):
