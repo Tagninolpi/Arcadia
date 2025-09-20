@@ -4,6 +4,11 @@ from datetime import datetime, timezone
 from .main_menu import players
 from .db_helper import get_games, initialize_game
  
+
+def connect4_initial_state():
+    """Return initial 6x7 Connect 4 board filled with empty squares."""
+    return [["⬜" for _ in range(7)] for _ in range(6)]
+
 # ---------------- Embed Functions ----------------
 def main_menu_embed(user_id: int):
     """
@@ -75,10 +80,18 @@ class MenuButton(Button):
         # Handle Create button click: create a new game
         if players[user_id]["menu"] == "create" and self.menu_name not in ["main_menu", "exit"]:
             # Create game in Supabase
-            initial_game_state = {
-                "status": "waiting_for_players",
-                "turn": 0
-            }
+            if self.menu_name.lower() == "connect4":
+                initial_game_state = {
+                    "board": connect4_initial_state(),
+                    "turn": None,  # no player yet
+                    "created_at": str(datetime.utcnow())
+                }
+            else:
+                # Default initial state for other games
+                initial_game_state = {
+                    "status": "waiting_for_players",
+                    "created_at": str(datetime.utcnow())
+                }
             new_game = initialize_game(
                 game_name=self.menu_name,
                 active_players=[user_id],
