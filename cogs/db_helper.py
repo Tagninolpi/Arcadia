@@ -2,8 +2,9 @@ from supabase import create_client
 import os
 
 # ------------------ Supabase Client ------------------
-SUPABASE_URL = os.getenv("https://srkcqfvhchfyasmaglcs.supabase.co")  # your project URL
-SUPABASE_KEY = os.getenv("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNya2NxZnZoY2hmeWFzbWFnbGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNjEwNDEsImV4cCI6MjA3MzkzNzA0MX0.qVAaIbhNu9O0mNLXGNpDwEvKTgobXsZ4RBwzBRcTSP4")  # service key
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ------------------ Functions ------------------
