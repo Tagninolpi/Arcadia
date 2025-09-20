@@ -27,7 +27,7 @@ class MainMenu(commands.Cog):
             return
 
         user = interaction.user
-        if False:#user.id in players:
+        if user.id in players:
             await interaction.response.send_message(
                 "You already joined Arcadia. You can't use this command now.", 
                 ephemeral=True

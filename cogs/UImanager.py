@@ -1,34 +1,25 @@
 import discord
 from discord.ui import Button, View
-from datetime import datetime, timezone
+from datetime import datetime
 from .main_menu import players
 from .db_helper import get_games, initialize_game
- 
 
+# ------------------ Connect 4 Initial State ------------------
 def connect4_initial_state():
-    """Return initial 6x7 Connect 4 board filled with empty squares."""
+    """Return a 6x7 Connect 4 board filled with empty squares."""
     return [["⬜" for _ in range(7)] for _ in range(6)]
 
-# ---------------- Embed Functions ----------------
+# ------------------ Embed Functions ------------------
 def main_menu_embed(user_id: int):
-    """
-    Embed for Main Menu: welcome player, show instructions.
-    """
     player_name = players.get(user_id, {}).get("name", "Player")
     embed = discord.Embed(
         title=f"🎮 Welcome to Arcadia, {player_name}!",
-        description=(
-            "You can **join an existing game** or **create a new one**.\n\n"
-            "Choose an option below to start your adventure!"
-        ),
+        description="You can **join an existing game** or **create a new one**.\n\nChoose an option below to start your adventure!",
         color=discord.Color.blurple()
     )
     return embed
 
 def join_menu_embed(user_id: int):
-    """
-    Embed for Join Menu: list available games to join.
-    """
     games = get_games()
     description = ""
     if not games:
@@ -45,9 +36,6 @@ def join_menu_embed(user_id: int):
     return embed
 
 def create_menu_embed(user_id: int):
-    """
-    Embed for Create Menu: choose game type to create.
-    """
     embed = discord.Embed(
         title="🛠️ Create a New Game",
         description="Choose a game type to create a new instance:",
@@ -55,7 +43,7 @@ def create_menu_embed(user_id: int):
     )
     return embed
 
-# ---------------- Button Class ----------------
+# ------------------ Menu Button ------------------
 class MenuButton(Button):
     def __init__(self, label: str, style=discord.ButtonStyle.gray):
         super().__init__(label=label, style=style, custom_id=f"menu_{label.lower()}")
@@ -65,29 +53,27 @@ class MenuButton(Button):
         user_id = interaction.user.id
         players.setdefault(user_id, {})["menu"] = self.menu_name
 
+        # Defer response to avoid "already acknowledged" error
+        await interaction.response.defer()
+
+        # ---------------- Exit Button ----------------
         if self.menu_name == "exit":
-            # Close menu
             for child in self.view.children:
                 child.disabled = True
-            await interaction.response.edit_message(
-                content="Arcadia closed, see you soon 👋",
-                embed=None,
-                view=None
-            )
-            players.popitem(user_id)
+            await interaction.edit_original_response(content="Arcadia closed, see you soon 👋", embed=None, view=None)
+            players.pop(user_id, None)
             return
 
-        # Handle Create button click: create a new game
+        # ---------------- Create Button Click ----------------
         if players[user_id]["menu"] == "create" and self.menu_name not in ["main_menu", "exit"]:
-            # Create game in Supabase
-            if self.menu_name.lower() == "connect4":
+            # Initialize game state depending on type
+            if self.menu_name == "connect4":
                 initial_game_state = {
                     "board": connect4_initial_state(),
-                    "turn": None,  # no player yet
+                    "turn": None,
                     "created_at": str(datetime.utcnow())
                 }
             else:
-                # Default initial state for other games
                 initial_game_state = {
                     "status": "waiting_for_players",
                     "created_at": str(datetime.utcnow())
@@ -99,37 +85,25 @@ class MenuButton(Button):
                 game_state=initial_game_state
             )
             if new_game:
-                await interaction.response.send_message(
-                    f"✅ Created a new **{self.menu_name}** game!", 
-                    ephemeral=True
-                )
+                await interaction.followup.send(f"✅ Created a new **{self.menu_name}** game!", ephemeral=True)
             else:
-                await interaction.response.send_message(
-                    f"❌ Failed to create game **{self.menu_name}**.", 
-                    ephemeral=True
-                )
-            # Update menu to Join menu automatically
+                await interaction.followup.send(f"❌ Failed to create game **{self.menu_name}**.", ephemeral=True)
+            # Automatically go to Join menu
             players[user_id]["menu"] = "join"
 
-        # Update the view & embed
+        # ---------------- Update Embed + View ----------------
         embed = MenuViews.get_embed(user_id)
         view = MenuViews.get_view(user_id)
-        await interaction.response.edit_message(embed=embed, view=view)
+        await interaction.edit_original_response(embed=embed, view=view)
 
-# ---------------- Views Class ----------------
+# ------------------ Views Class ------------------
 class MenuViews:
-    """
-    Dynamic embeds + views for all menus.
-    """
-
-    # Menu configuration
     MENU_BUTTONS_CONFIG = {
         "main_menu": ["Join", "Create", "Exit"],
-        "join": [],  # filled dynamically with game names + Back
-        "create": ["connect4", "tic tac toe", "battleship", "hangman", "Exit"]  # list game types
+        "join": [],  # dynamically filled with game names + Back
+        "create": ["connect4", "tic tac toe", "battleship", "hangman", "Exit"]
     }
 
-    # ---------------- Embed Getter ------------------
     @staticmethod
     def get_embed(user_id: int):
         menu_name = players.get(user_id, {}).get("menu", "main_menu")
@@ -139,17 +113,14 @@ class MenuViews:
             return join_menu_embed(user_id)
         elif menu_name == "create":
             return create_menu_embed(user_id)
-        # fallback
         return main_menu_embed(user_id)
 
-    # ---------------- View Getter ------------------
     @staticmethod
     def get_view(user_id: int) -> View:
         menu_name = players.get(user_id, {}).get("menu", "main_menu")
         labels = []
 
         if menu_name == "join":
-            # Fetch games dynamically
             games = get_games()
             if games:
                 labels = [g["game_name"] for g in games]
@@ -162,5 +133,4 @@ class MenuViews:
             style = discord.ButtonStyle.red if label.lower() == "exit" else discord.ButtonStyle.gray
             button = MenuButton(label, style)
             view.add_item(button)
-
         return view
