@@ -9,7 +9,7 @@ arcadia_join_dict = {
     "name": "unknown",
     "menu": "main_menu",  # standardize menu key
 }
-print("main_menu.py loaded")
+
 class MainMenu(commands.Cog):
     """Main menu commands for Arcadia."""
 
