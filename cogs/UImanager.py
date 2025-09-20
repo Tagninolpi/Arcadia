@@ -21,23 +21,17 @@ def main_menu_embed(user_id: int):
 
 # ---------------- Button Class ----------------
 class MenuButton(Button):
-    """
-    Generic menu navigation button.
-    When clicked, updates players[user_id]['menu'] to the button's name.
-    """
     def __init__(self, label: str, style=discord.ButtonStyle.gray):
         super().__init__(label=label, style=style, custom_id=f"menu_{label.lower()}")
-        self.menu_name = label  # this button's menu name
+        self.menu_name = label.lower()  # store lowercase for consistency ✅
 
     async def callback(self, interaction: discord.Interaction):
         user_id = interaction.user.id
 
-        # Update player's current menu
+        # Always store lowercase menu name
         players.setdefault(user_id, {})["menu"] = self.menu_name
 
-        # Handle Exit button separately
-        if self.menu_name.lower() == "exit":
-            # Disable all buttons and replace message
+        if self.menu_name == "exit":
             for child in self.view.children:
                 child.disabled = True
             await interaction.response.edit_message(
@@ -47,9 +41,10 @@ class MenuButton(Button):
             )
             return
 
-        # Otherwise, update the embed to the new menu
+        # Update to new embed + view
         embed = MenuViews.get_embed(user_id)
-        await interaction.response.edit_message(embed=embed, view=self.view)
+        view = MenuViews.get_view(user_id)
+        await interaction.response.edit_message(embed=embed, view=view)
 
 
 # ---------------- Views Class ----------------
