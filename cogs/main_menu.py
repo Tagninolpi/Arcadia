@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from bot.config import Config as c
-from .UImanager import MenuViews  # the class we defined for embeds + views
+# the class we defined for embeds + views
 
 players = {}
 arcadia_join_dict = {
@@ -39,6 +39,7 @@ class MainMenu(commands.Cog):
         players[user.id]["name"] = user.display_name or user.name
 
         # Send main menu embed + buttons
+        from UImanager import MenuViews
         embed = MenuViews.get_embed(user.id)
         view = MenuViews.get_view(user.id)
         await interaction.response.send_message(
