@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from bot.config import Config as c
-from UImanager import MenuViews  # the class we defined for embeds + views
+from .UImanager import MenuViews  # the class we defined for embeds + views
 
 players = {}
 arcadia_join_dict = {
