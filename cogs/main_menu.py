@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from bot.config import Config as c
-from .db_helper import get_games
+from .db_helper import initialize_game
 
 players = {}
 arcadia_join_dict = {
@@ -48,26 +48,45 @@ menu_button_dict = {
     "create": ("main menu", "exit"),
 }
 
+# Use callables to avoid running game creation at import time
+create_buttons_dict = {
+    "connect4": lambda user_id: initialize_game(
+        game_name="connect4",
+        active_players=[user_id],
+        waiting_players=[],
+        game_state=[["⬜" for _ in range(6)] for _ in range(7)]
+    ),
+    "battleship": None,
+    "tictactoe": None,
+    "hangman": None,
+}
 
-# ------------------ Dynamic View ------------------
+# ------------------ Dynamic Views ------------------
 class MenuView(discord.ui.View):
+    """Main menu buttons view."""
     def __init__(self, user: discord.User):
         super().__init__(timeout=None)
         self.user = user
         current_menu = players[user.id]["menu"]
 
-        # Add buttons dynamically from the dict
+        # Add buttons dynamically
         for button_name in menu_button_dict[current_menu]:
-            self.add_item(MenuButton(button_name))
-
+            if button_name == "create":
+                self.add_item(CreateMenuOpenerButton(user))
+            else:
+                self.add_item(MenuButton(button_name))
 
 class MenuButton(discord.ui.Button):
     def __init__(self, name: str):
-        super().__init__(label=name.capitalize(), style=discord.ButtonStyle.primary)
+        style = discord.ButtonStyle.primary if name != "exit" else discord.ButtonStyle.danger
+        super().__init__(label=name.capitalize(), style=style)
         self.name = name
 
     async def callback(self, interaction: discord.Interaction):
         user = interaction.user
+        if user.id not in players:
+            await interaction.response.send_message("You are not in Arcadia!", ephemeral=True)
+            return
 
         if self.name == "exit":
             players.pop(user.id, None)
@@ -78,18 +97,70 @@ class MenuButton(discord.ui.Button):
             )
             return
 
-        # Update the player's menu
+        # Update player menu
         players[user.id]["menu"] = self.name
-
-        # Get the correct embed + new view
         embed_func = menu_embeds[self.name]
         embed = embed_func(user.id)
-        new_view = MenuView(user)
-
-        await interaction.response.edit_message(embed=embed, view=new_view)
+        await interaction.response.edit_message(embed=embed, view=MenuView(user))
 
 
-# ------------------ Cog ------------------
+# ------------------ Create Menu Buttons ------------------
+class CreateMenuOpenerButton(discord.ui.Button):
+    """Opens the create menu."""
+    def __init__(self, user: discord.User):
+        super().__init__(label="Create", style=discord.ButtonStyle.success)
+        self.user = user
+
+    async def callback(self, interaction: discord.Interaction):
+        players[self.user.id]["menu"] = "create"
+        embed = create_menu_embed(self.user.id)
+        await interaction.response.edit_message(embed=embed, view=CreateMenuView(self.user))
+
+
+class CreateMenuView(discord.ui.View):
+    """Buttons for creating games."""
+    def __init__(self, user: discord.User):
+        super().__init__(timeout=None)
+        self.user = user
+
+        for game_name, creation in create_buttons_dict.items():
+            self.add_item(CreateMenuButton(game_name))
+
+        # Always add exit button
+        self.add_item(MenuButton("exit"))
+
+class CreateMenuButton(discord.ui.Button):
+    """Individual create game button."""
+    def __init__(self, game_name: str):
+        super().__init__(label=game_name.capitalize(), style=discord.ButtonStyle.primary)
+        self.game_name = game_name
+
+    async def callback(self, interaction: discord.Interaction):
+        user = interaction.user
+        if user.id not in players:
+            await interaction.response.send_message("You are not in Arcadia!", ephemeral=True)
+            return
+
+        creation_func = create_buttons_dict[self.game_name]
+        if creation_func is None:
+            await interaction.response.send_message(f"{self.game_name.capitalize()} is not available yet.", ephemeral=True)
+            return
+
+        # Run the game creation function
+        creation_func(user.id)
+
+        # Update player menu to a placeholder game menu
+        players[user.id]["menu"] = f"{self.game_name}_menu"
+        embed = discord.Embed(
+            title=f"🎮 {self.game_name.capitalize()} Menu",
+            description="Game menu will be implemented here.",
+            color=discord.Color.blurple()
+        )
+
+        await interaction.response.edit_message(embed=embed, view=None)
+
+
+# ------------------ Main Cog ------------------
 class MainMenu(commands.Cog):
     """Main menu commands for Arcadia."""
 
