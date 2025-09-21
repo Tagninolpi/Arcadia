@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from bot.config import Config as c
 from .db_helper import initialize_game
-from .connect4 import show_connect4
+
 players = {}
 arcadia_join_dict = {
     "name": "unknown",
