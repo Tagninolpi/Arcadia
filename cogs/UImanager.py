@@ -7,7 +7,7 @@ from .db_helper import get_games, initialize_game
 # ------------------ Connect 4 Initial State ------------------
 def connect4_initial_state():
     """Return a 6x7 Connect 4 board filled with empty squares."""
-    return [["⬜" for _ in range(7)] for _ in range(6)]
+    return [["⬜" for _ in range(6)] for _ in range(7)]
 
 # ------------------ Embed Functions ------------------
 def main_menu_embed(user_id: int):
@@ -61,7 +61,7 @@ class MenuButton(Button):
             for child in self.view.children:
                 child.disabled = True
             await interaction.edit_original_response(content="Arcadia closed, see you soon 👋", embed=None, view=None)
-            players.pop(user_id, None)
+            players.popitem(user_id)
             return
 
         # ---------------- Create Button Click ----------------
@@ -69,15 +69,11 @@ class MenuButton(Button):
             # Initialize game state depending on type
             if self.menu_name == "connect4":
                 initial_game_state = {
-                    "board": connect4_initial_state(),
-                    "turn": None,
-                    "created_at": str(datetime.utcnow())
+                    "board": connect4_initial_state()
                 }
             else:
                 initial_game_state = {
-                    "status": "waiting_for_players",
-                    "created_at": str(datetime.utcnow())
-                }
+                    "status": "waiting_for_players"}
             new_game = initialize_game(
                 game_name=self.menu_name,
                 active_players=[user_id],
