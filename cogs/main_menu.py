@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from bot.config import Config as c
 from .db_helper import initialize_game
-
+from .connect4 import show_connect4
 players = {}
 arcadia_join_dict = {
     "name": "unknown",
@@ -149,18 +149,22 @@ class CreateMenuButton(discord.ui.Button):
             await interaction.response.send_message(f"{self.game_name.capitalize()} is not available yet.", ephemeral=True)
             return
 
-        # Run the game creation function
+        # Run the game creation function if it exists
         creation_func(user.id)
 
-        # Update player menu to a placeholder game menu
-        players[user.id]["menu"] = f"{self.game_name}_menu"
-        embed = discord.Embed(
-            title=f"🎮 {self.game_name.capitalize()} Menu",
-            description="Game menu will be implemented here.",
-            color=discord.Color.blurple()
-        )
-
-        await interaction.response.edit_message(embed=embed, view=None)
+        # Directly call the Connect4 module if it's Connect4
+        if self.game_name.lower() == "connect4":
+            from .connect4 import show_connect4
+            await show_connect4(interaction, "connect4", user.id)
+        else:
+            # fallback placeholder for other games
+            players[user.id]["menu"] = f"{self.game_name}_menu"
+            embed = discord.Embed(
+                title=f"🎮 {self.game_name.capitalize()} Menu",
+                description="Game menu will be implemented here.",
+                color=discord.Color.blurple()
+            )
+            await interaction.response.edit_message(embed=embed, view=None)
 
 
 # ------------------ Main Cog ------------------
