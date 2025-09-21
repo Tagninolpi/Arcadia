@@ -9,39 +9,13 @@ def connect4_initial_state():
     """Return a 6x7 Connect 4 board filled with empty squares."""
     return [["⬜" for _ in range(6)] for _ in range(7)]
 
-# ------------------ Embed Functions ------------------
-def main_menu_embed(user_id: int):
-    player_name = players.get(user_id, {}).get("name", "Player")
-    embed = discord.Embed(
-        title=f"🎮 Welcome to Arcadia, {player_name}!",
-        description="You can **join an existing game** or **create a new one**.\n\nChoose an option below to start your adventure!",
-        color=discord.Color.blurple()
-    )
-    return embed
+menu_embeds = {
+    "main menu":main_menu_embed()
+}
 
-def join_menu_embed(user_id: int):
-    games = get_games()
-    description = ""
-    if not games:
-        description = "No games available to join right now."
-    else:
-        for g in games:
-            description += f"**{g['game_name']}** — Active: {len(g['active_players'])}, Waiting: {len(g['waiting_players'])}\n"
 
-    embed = discord.Embed(
-        title="📥 Join a Game",
-        description=description,
-        color=discord.Color.green()
-    )
-    return embed
 
-def create_menu_embed(user_id: int):
-    embed = discord.Embed(
-        title="🛠️ Create a New Game",
-        description="Choose a game type to create a new instance:",
-        color=discord.Color.orange()
-    )
-    return embed
+
 
 # ------------------ Menu Button ------------------
 class MenuButton(Button):
