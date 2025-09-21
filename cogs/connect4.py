@@ -98,6 +98,6 @@ class ColumnButton(discord.ui.Button):
             description=render_board(self.game["game_state"]),
             color=discord.Color.blurple()
         )
-
+        players.pop(self.user_id, None)
         # Close menu like "exit"
         await interaction.response.edit_message(embed=embed, view=None)
