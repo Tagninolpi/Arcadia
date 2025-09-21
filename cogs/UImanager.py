@@ -61,7 +61,7 @@ class MenuButton(Button):
             for child in self.view.children:
                 child.disabled = True
             await interaction.edit_original_response(content="Arcadia closed, see you soon 👋", embed=None, view=None)
-            players.popitem(user_id)
+            players.pop(user_id)
             return
 
         # ---------------- Create Button Click ----------------
