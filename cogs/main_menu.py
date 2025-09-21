@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from bot.config import Config as c
 from .db_helper import initialize_game, get_games
-from .connect4 import show_connect4
+
 
 players = {}
 arcadia_join_dict = {
@@ -139,7 +139,7 @@ class CreateMenuButton(discord.ui.Button):
             return
 
         creation_func(user.id)
-
+        from .connect4 import show_connect4
         if self.game_name.lower() == "connect4":
             await show_connect4(interaction, "connect4", user.id)
         else:
@@ -187,7 +187,7 @@ class JoinMenuButton(discord.ui.Button):
         if user.id not in players:
             await interaction.response.send_message("You are not in Arcadia!", ephemeral=True)
             return
-
+        from .connect4 import show_connect4
         if self.game_name.lower() == "connect4":
             await show_connect4(interaction, "connect4", user.id)
         else:
