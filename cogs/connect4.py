@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from .db_helper import get_games, update_game
-from . import players
+from .main_menu import players
 
 CIRCLE = ["🔴", "🟡"]  # player 1, player 2
 EMPTY = "⬜"
