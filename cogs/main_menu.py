@@ -45,7 +45,7 @@ menu_embeds = {
 menu_button_dict = {
     "main menu": ("join", "create", "exit"),
     "join": ("main menu", "exit"),
-    "create": ("main menu", "exit"),
+    "create": ("main menu", "exit"),  # still used as standard buttons in create menu
 }
 
 # Use callables to avoid running game creation at import time
@@ -118,16 +118,19 @@ class CreateMenuOpenerButton(discord.ui.Button):
 
 
 class CreateMenuView(discord.ui.View):
-    """Buttons for creating games."""
+    """Buttons for creating games plus standard buttons."""
     def __init__(self, user: discord.User):
         super().__init__(timeout=None)
         self.user = user
 
-        for game_name, creation in create_buttons_dict.items():
+        # Add all new game buttons first
+        for game_name in create_buttons_dict.keys():
             self.add_item(CreateMenuButton(game_name))
 
-        # Always add exit button
-        self.add_item(MenuButton("exit"))
+        # Then add the standard create menu buttons (main menu + exit)
+        for button_name in menu_button_dict["create"]:
+            self.add_item(MenuButton(button_name))
+
 
 class CreateMenuButton(discord.ui.Button):
     """Individual create game button."""
