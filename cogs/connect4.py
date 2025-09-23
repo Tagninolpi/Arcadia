@@ -8,6 +8,23 @@ EMPTY = "⬜"
 ROWS = 6
 COLS = 7
 
+class ExitOnlyView(discord.ui.View):
+    """View with only an Exit button (for spectators or inactive players)."""
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(ExitButton())
+
+class ExitButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="Exit", style=discord.ButtonStyle.danger)
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.edit_message(
+            content="You have left the game view.",
+            embed=None,
+            view=None
+        )
+
 def get_player_color_index(user_id, active_players):
     """Return 0 or 1 depending on player index in active_players"""
     try:
@@ -26,23 +43,29 @@ def render_board(game_state):
         lines.append(line)
     return "\n".join(lines)
 
-
 async def show_connect4(interaction: discord.Interaction, game_name: str, user_id: int):
-    """
-    Fetch the game from the DB with this player as active, show the current board,
-    and send a view with 7 buttons for columns.
-    """
-    # Find the game
     games = get_games()
-    game = None
-    for g in games:
-        if g["game_name"] == game_name and user_id in g["active_players"]:
-            game = g
-            break
+    game = next((g for g in games if g["game_name"] == game_name), None)
 
     if game is None:
-        await interaction.response.send_message("No game found for you.", ephemeral=True)
+        await interaction.response.send_message("No Connect 4 game found. Create one first!", ephemeral=True)
         return
+
+    # If player not in game, try to join as second player
+    if user_id not in game["active_players"] and user_id not in game["waiting_players"]:
+        if len(game["active_players"]) + len(game["waiting_players"]) >= 2:
+            # Full → spectator
+            embed = discord.Embed(
+                title=f"🎮 {game_name.capitalize()} (Spectating)",
+                description=render_board(game["game_state"]),
+                color=discord.Color.greyple()
+            )
+            await interaction.response.send_message(embed=embed, view=ExitOnlyView(), ephemeral=True)
+            return
+        else:
+            waiting = game["waiting_players"] + [user_id]
+            update_game(game["id"], waiting_players=waiting)
+            game["waiting_players"] = waiting
 
     embed = discord.Embed(
         title=f"🎮 {game_name.capitalize()}",
@@ -50,8 +73,10 @@ async def show_connect4(interaction: discord.Interaction, game_name: str, user_i
         color=discord.Color.blurple()
     )
 
-    view = Connect4View(game, user_id)
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    if game.get("turn") == user_id:
+        await interaction.response.send_message(embed=embed, view=Connect4View(game, user_id), ephemeral=True)
+    else:
+        await interaction.response.send_message(embed=embed, view=ExitOnlyView(), ephemeral=True)
 
 
 class Connect4View(discord.ui.View):
@@ -74,30 +99,41 @@ class ColumnButton(discord.ui.Button):
         self.user_id = user_id
 
     async def callback(self, interaction: discord.Interaction):
-        # Determine player's circle
-        color_index = self.game["active_players"].index(self.user_id) % 2
-        circle = CIRCLE[color_index]
+        # Enforce turn order
+        if self.user_id != self.game.get("turn"):
+            await interaction.response.send_message("Not your turn!", ephemeral=True)
+            return
 
-        # Drop the disc in the selected column
+        circle = CIRCLE[0] if self.user_id == self.game["active_players"][0] else CIRCLE[1]
         column = self.game["game_state"][self.col_index]
+
+        # Drop disc
         for i in range(ROWS):
             if column[i] == EMPTY:
                 column[i] = circle
                 break
         else:
-            # Column full
             await interaction.response.send_message("Column full!", ephemeral=True)
             return
 
-        # Update DB
-        update_game(self.game["id"], game_state=self.game["game_state"])
+        # Determine opponent for next turn
+        if self.user_id in self.game["active_players"]:
+            if self.game["waiting_players"]:
+                opponent = self.game["waiting_players"][0]
+            else:
+                opponent = None
+        else:
+            opponent = self.game["active_players"][0]
 
-        # Render new board
+        update_game(
+            self.game["id"],
+            game_state=self.game["game_state"],
+            turn=opponent
+        )
+
         embed = discord.Embed(
             title=f"🎮 {self.game['game_name'].capitalize()}",
             description=render_board(self.game["game_state"]),
             color=discord.Color.blurple()
         )
-        players.pop(self.user_id, None)
-        # Close menu like "exit"
         await interaction.response.edit_message(embed=embed, view=None)

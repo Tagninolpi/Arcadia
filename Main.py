@@ -29,6 +29,7 @@ class ArcadiaBot(commands.Bot):
         # List your cogs here
         cogs_to_load = [
             "cogs.main_menu",
+            "cogs.GameCleaner",
         ]
 
         for cog in cogs_to_load:

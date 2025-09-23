@@ -23,3 +23,43 @@ if 2 people agree to draw it's a draw
 exit => close view + delete innstance in players and db if not in a game
 
 data base , 
+
+
+folder : arcadia
+Main
+cogs/
+=>main menu
+=>connect4
+=>battleship
+=>hangman
+=> tictactoe
+
+main menu : /arcadia => start main menu view:
+menu dict:
+mainmenu : create,join,exit
+create: mainmenu, exit
+join : main menu, exit
+
+createview: connect4,tictactoe,battleship,hangman
+
+action: if not already in list:
+if connect 4 :
+add empty to list => start connect 4
+
+join:
+if list empty go back to main menu (message createnew)
+if hangman:
+else:
+    if 2players : 
+        show view without buttons (only exit)
+    esle:
+        add name to list (inactive (=other color /pllayer)), start connect 4
+
+
+connect4:
+if in active and state = active: 
+    show view and buttons,
+    update list pos and state
+else:
+    show view without buttons (only exit)
+

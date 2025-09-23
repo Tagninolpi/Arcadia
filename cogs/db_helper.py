@@ -21,12 +21,13 @@ def get_games():
             "active_players": game["active_players"],
             "waiting_players": game["waiting_players"],
             "game_state": game["game_state"],
+            "turn": game.get("turn"),
             "updated_at": game["updated_at"]
         })
     return games_list
 
 
-def update_game(game_id: int, active_players=None, waiting_players=None, game_state=None):
+def update_game(game_id: int, active_players=None, waiting_players=None, game_state=None, turn=None):
     """Update a specific game row by id. Only provide the fields you want to update."""
     data = {}
     if active_players is not None:
@@ -35,6 +36,8 @@ def update_game(game_id: int, active_players=None, waiting_players=None, game_st
         data["waiting_players"] = waiting_players
     if game_state is not None:
         data["game_state"] = game_state
+    if turn is not None:
+        data["turn"] = turn
 
     if not data:
         return False
@@ -50,7 +53,7 @@ def reset_game_table():
     return True
 
 
-def initialize_game(game_name: str, active_players=None, waiting_players=None, game_state=None):
+def initialize_game(game_name: str, active_players=None, waiting_players=None, game_state=None, turn=None):
     """Add a new game instance to the table."""
     if active_players is None:
         active_players = []
@@ -58,12 +61,15 @@ def initialize_game(game_name: str, active_players=None, waiting_players=None, g
         waiting_players = []
     if game_state is None:
         game_state = {}
+    if turn is None and active_players:
+        turn = active_players[0]   # default: creator’s turn
 
     new_game = {
         "game_name": game_name,
         "active_players": active_players,
         "waiting_players": waiting_players,
         "game_state": game_state,
+        "turn": turn,
         "updated_at": "NOW()"
     }
 
