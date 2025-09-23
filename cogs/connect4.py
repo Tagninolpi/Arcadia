@@ -71,7 +71,7 @@ async def show_connect4(interaction: discord.Interaction, game_name: str, user_i
                 description=render_board(game["game_state"]),
                 color=discord.Color.greyple()
             )
-            await interaction.response.send_message(embed=embed, view=ExitOnlyView(), ephemeral=True)
+            await interaction.response.send_message(embed=embed, view=ExitOnlyView(user_id), ephemeral=True)
             return
         else:
             waiting = game["waiting_players"] + [user_id]
@@ -87,7 +87,7 @@ async def show_connect4(interaction: discord.Interaction, game_name: str, user_i
     if game.get("turn") == user_id:
         await interaction.response.send_message(embed=embed, view=Connect4View(game, user_id), ephemeral=True)
     else:
-        await interaction.response.send_message(embed=embed, view=ExitOnlyView(), ephemeral=True)
+        await interaction.response.send_message(embed=embed, view=ExitOnlyView(user_id), ephemeral=True)
 
 
 class Connect4View(discord.ui.View):
