@@ -22,7 +22,7 @@ class GameCleaner(commands.Cog):
             except Exception:
                 continue
 
-            if now - last_update > timedelta(days=3):
+            if now - last_update > timedelta(days=1):
                 delete_game(g["id"])
                 print(f"🗑️ Deleted stale game: {g['game_name']} (id={g['id']})")
 

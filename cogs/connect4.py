@@ -9,21 +9,32 @@ ROWS = 6
 COLS = 7
 
 class ExitOnlyView(discord.ui.View):
-    """View with only an Exit button (for spectators or inactive players)."""
-    def __init__(self):
+    def __init__(self, user_id):
         super().__init__(timeout=None)
+        self.user_id = user_id
         self.add_item(ExitButton())
+
+    async def on_timeout(self):
+        from .main_menu import players
+        players.pop(self.user_id, None)
+
 
 class ExitButton(discord.ui.Button):
     def __init__(self):
         super().__init__(label="Exit", style=discord.ButtonStyle.danger)
 
     async def callback(self, interaction: discord.Interaction):
+        user_id = interaction.user.id
+        # Remove from global players dict if present
+        from .main_menu import players
+        players.pop(user_id, None)
+
         await interaction.response.edit_message(
-            content="You have left the game view.",
+            content="You have left the game.",
             embed=None,
             view=None
         )
+
 
 def get_player_color_index(user_id, active_players):
     """Return 0 or 1 depending on player index in active_players"""
@@ -80,14 +91,17 @@ async def show_connect4(interaction: discord.Interaction, game_name: str, user_i
 
 
 class Connect4View(discord.ui.View):
-    """View with 7 buttons for Connect4 columns"""
     def __init__(self, game, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=None)  # or set a timeout if you want
         self.game = game
         self.user_id = user_id
 
         for i in range(COLS):
             self.add_item(ColumnButton(i, game, user_id))
+
+    async def on_timeout(self):
+        from .main_menu import players
+        players.pop(self.user_id, None)
 
 
 class ColumnButton(discord.ui.Button):

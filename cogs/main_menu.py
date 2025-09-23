@@ -62,7 +62,7 @@ create_buttons_dict = {
 class MenuView(discord.ui.View):
     """Main menu buttons view."""
     def __init__(self, user: discord.User):
-        super().__init__(timeout=None)
+        super().__init__(timeout=None)  # set timeout if needed
         self.user = user
         current_menu = players[user.id]["menu"]
 
@@ -73,6 +73,11 @@ class MenuView(discord.ui.View):
                 self.add_item(JoinMenuOpenerButton(user))
             else:
                 self.add_item(MenuButton(button_name))
+
+    async def on_timeout(self):
+        # Remove player from global dict when the view closes
+        players.pop(self.user.id, None)
+
 
 class MenuButton(discord.ui.Button):
     def __init__(self, name: str):
@@ -111,6 +116,7 @@ class CreateMenuOpenerButton(discord.ui.Button):
         embed = create_menu_embed(self.user.id)
         await interaction.response.edit_message(embed=embed, view=CreateMenuView(self.user))
 
+
 class CreateMenuView(discord.ui.View):
     def __init__(self, user: discord.User):
         super().__init__(timeout=None)
@@ -121,6 +127,10 @@ class CreateMenuView(discord.ui.View):
 
         for button_name in menu_button_dict["create"]:
             self.add_item(MenuButton(button_name))
+
+    async def on_timeout(self):
+        players.pop(self.user.id, None)
+
 
 class CreateMenuButton(discord.ui.Button):
     def __init__(self, game_name: str):
@@ -163,6 +173,7 @@ class JoinMenuOpenerButton(discord.ui.Button):
         embed = join_menu_embed(self.user.id)
         await interaction.response.edit_message(embed=embed, view=JoinMenuView(self.user))
 
+
 class JoinMenuView(discord.ui.View):
     def __init__(self, user: discord.User):
         super().__init__(timeout=None)
@@ -176,6 +187,10 @@ class JoinMenuView(discord.ui.View):
         # Add back/exit
         for button_name in menu_button_dict["join"]:
             self.add_item(MenuButton(button_name))
+
+    async def on_timeout(self):
+        players.pop(self.user.id, None)
+
 
 class JoinMenuButton(discord.ui.Button):
     def __init__(self, game_name: str):
@@ -226,6 +241,7 @@ class MainMenu(commands.Cog):
             view=MenuView(user),
             ephemeral=True
         )
+
 
 async def setup(bot):
     await bot.add_cog(MainMenu(bot))
