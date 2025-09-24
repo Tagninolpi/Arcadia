@@ -1,40 +1,14 @@
 import discord
-from discord.ext import commands
 from .db_helper import get_games, update_game
-from .main_menu import players
+from .main_menu import players, BaseView  # import global session/exit handling
 
 CIRCLE = ["🔴", "🟡"]  # player 1, player 2
 EMPTY = "⬜"
 ROWS = 6
 COLS = 7
 
-class ExitOnlyView(discord.ui.View):
-    def __init__(self, user_id):
-        super().__init__(timeout=None)
-        self.user_id = user_id
-        self.add_item(ExitButton())
 
-    async def on_timeout(self):
-        from .main_menu import players
-        players.pop(self.user_id, None)
-
-
-class ExitButton(discord.ui.Button):
-    def __init__(self):
-        super().__init__(label="Exit", style=discord.ButtonStyle.danger)
-
-    async def callback(self, interaction: discord.Interaction):
-        user_id = interaction.user.id
-        # Remove from global players dict if present
-        from .main_menu import players
-        players.pop(user_id, None)
-
-        await interaction.response.edit_message(
-            content="You have left the game.",
-            embed=None,
-            view=None
-        )
-
+# ------------------ Helper Functions ------------------
 
 def get_player_color_index(user_id, active_players):
     """Return 0 or 1 depending on player index in active_players"""
@@ -43,9 +17,9 @@ def get_player_color_index(user_id, active_players):
     except ValueError:
         return 0  # fallback
 
+
 def render_board(game_state):
     """Convert the game_state (list of columns) into a string for Discord embed."""
-    # Build row by row (top to bottom)
     lines = []
     for r in reversed(range(ROWS)):
         line = ""
@@ -53,6 +27,9 @@ def render_board(game_state):
             line += game_state[c][r]
         lines.append(line)
     return "\n".join(lines)
+
+
+# ------------------ Entry Point ------------------
 
 async def show_connect4(interaction: discord.Interaction, game_name: str, user_id: int):
     games = get_games()
@@ -71,7 +48,11 @@ async def show_connect4(interaction: discord.Interaction, game_name: str, user_i
                 description=render_board(game["game_state"]),
                 color=discord.Color.greyple()
             )
-            await interaction.response.send_message(embed=embed, view=ExitOnlyView(user_id), ephemeral=True)
+            await interaction.response.send_message(
+                embed=embed,
+                view=ExitOnlyView(user_id),  # uses BaseView logic
+                ephemeral=True
+            )
             return
         else:
             waiting = game["waiting_players"] + [user_id]
@@ -85,23 +66,51 @@ async def show_connect4(interaction: discord.Interaction, game_name: str, user_i
     )
 
     if game.get("turn") == user_id:
-        await interaction.response.send_message(embed=embed, view=Connect4View(game, user_id), ephemeral=True)
+        await interaction.response.send_message(
+            embed=embed,
+            view=Connect4View(game, user_id),
+            ephemeral=True
+        )
     else:
-        await interaction.response.send_message(embed=embed, view=ExitOnlyView(user_id), ephemeral=True)
+        await interaction.response.send_message(
+            embed=embed,
+            view=ExitOnlyView(user_id),
+            ephemeral=True
+        )
 
 
-class Connect4View(discord.ui.View):
+# ------------------ Views ------------------
+
+class ExitOnlyView(BaseView):
+    """Exit-only view for spectators or waiting players."""
+    def __init__(self, user_id):
+        super().__init__(user_id)
+        self.add_item(ExitButton())
+
+
+class ExitButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="Exit", style=discord.ButtonStyle.danger)
+
+    async def callback(self, interaction: discord.Interaction):
+        user_id = interaction.user.id
+        players.pop(user_id, None)
+        await interaction.response.edit_message(
+            content="You have left the game.",
+            embed=None,
+            view=None
+        )
+
+
+class Connect4View(BaseView):
+    """Main Connect 4 interactive view."""
     def __init__(self, game, user_id):
-        super().__init__(timeout=None)  # or set a timeout if you want
+        super().__init__(user_id)
         self.game = game
         self.user_id = user_id
 
         for i in range(COLS):
             self.add_item(ColumnButton(i, game, user_id))
-
-    async def on_timeout(self):
-        from .main_menu import players
-        players.pop(self.user_id, None)
 
 
 class ColumnButton(discord.ui.Button):

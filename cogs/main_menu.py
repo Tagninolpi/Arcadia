@@ -4,14 +4,14 @@ from discord.ext import commands
 from bot.config import Config as c
 from .db_helper import initialize_game, get_games
 
-
+# ------------------ Global state ------------------
 players = {}
 arcadia_join_dict = {
     "name": "unknown",
     "menu": "main menu",
 }
 
-# ------------------ Embed Functions ------------------
+# ------------------ Embeds ------------------
 def main_menu_embed(user_id: int):
     player_name = players.get(user_id, {}).get("name", "Player")
     return discord.Embed(
@@ -58,11 +58,30 @@ create_buttons_dict = {
     "hangman": None,
 }
 
-# ------------------ Dynamic Views ------------------
-class MenuView(discord.ui.View):
+# ------------------ Base View ------------------
+class BaseView(discord.ui.View):
+    def __init__(self, user_id: int, timeout: int = 180):
+        super().__init__(timeout=timeout)
+        self.user_id = user_id
+        self.message: discord.Message | None = None
+
+    async def on_timeout(self):
+        players.pop(self.user_id, None)
+        try:
+            if self.message:
+                await self.message.edit(
+                    content="⏳ Session closed due to inactivity.",
+                    embed=None,
+                    view=None
+                )
+        except Exception:
+            pass
+
+# ------------------ Menu Views ------------------
+class MenuView(BaseView):
     """Main menu buttons view."""
     def __init__(self, user: discord.User):
-        super().__init__(timeout=None)  # set timeout if needed
+        super().__init__(user.id, timeout=180)
         self.user = user
         current_menu = players[user.id]["menu"]
 
@@ -73,11 +92,6 @@ class MenuView(discord.ui.View):
                 self.add_item(JoinMenuOpenerButton(user))
             else:
                 self.add_item(MenuButton(button_name))
-
-    async def on_timeout(self):
-        # Remove player from global dict when the view closes
-        players.pop(self.user.id, None)
-
 
 class MenuButton(discord.ui.Button):
     def __init__(self, name: str):
@@ -94,7 +108,7 @@ class MenuButton(discord.ui.Button):
         if self.name == "exit":
             players.pop(user.id, None)
             await interaction.response.edit_message(
-                content="Arcadia closed. See you soon!",
+                content="👋 Arcadia closed. See you soon!",
                 embed=None,
                 view=None
             )
@@ -102,8 +116,9 @@ class MenuButton(discord.ui.Button):
 
         players[user.id]["menu"] = self.name
         embed = menu_embeds[self.name](user.id)
-        await interaction.response.edit_message(embed=embed, view=MenuView(user))
-
+        view = MenuView(user)
+        await interaction.response.edit_message(embed=embed, view=view)
+        view.message = await interaction.original_response()
 
 # ------------------ Create Menu ------------------
 class CreateMenuOpenerButton(discord.ui.Button):
@@ -114,12 +129,13 @@ class CreateMenuOpenerButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         players[self.user.id]["menu"] = "create"
         embed = create_menu_embed(self.user.id)
-        await interaction.response.edit_message(embed=embed, view=CreateMenuView(self.user))
+        view = CreateMenuView(self.user)
+        await interaction.response.edit_message(embed=embed, view=view)
+        view.message = await interaction.original_response()
 
-
-class CreateMenuView(discord.ui.View):
+class CreateMenuView(BaseView):
     def __init__(self, user: discord.User):
-        super().__init__(timeout=None)
+        super().__init__(user.id, timeout=180)
         self.user = user
 
         for game_name in create_buttons_dict.keys():
@@ -127,10 +143,6 @@ class CreateMenuView(discord.ui.View):
 
         for button_name in menu_button_dict["create"]:
             self.add_item(MenuButton(button_name))
-
-    async def on_timeout(self):
-        players.pop(self.user.id, None)
-
 
 class CreateMenuButton(discord.ui.Button):
     def __init__(self, game_name: str):
@@ -161,7 +173,6 @@ class CreateMenuButton(discord.ui.Button):
             )
             await interaction.response.edit_message(embed=embed, view=None)
 
-
 # ------------------ Join Menu ------------------
 class JoinMenuOpenerButton(discord.ui.Button):
     def __init__(self, user: discord.User):
@@ -171,12 +182,13 @@ class JoinMenuOpenerButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         players[self.user.id]["menu"] = "join"
         embed = join_menu_embed(self.user.id)
-        await interaction.response.edit_message(embed=embed, view=JoinMenuView(self.user))
+        view = JoinMenuView(self.user)
+        await interaction.response.edit_message(embed=embed, view=view)
+        view.message = await interaction.original_response()
 
-
-class JoinMenuView(discord.ui.View):
+class JoinMenuView(BaseView):
     def __init__(self, user: discord.User):
-        super().__init__(timeout=None)
+        super().__init__(user.id, timeout=180)
         self.user = user
 
         # Show all available games
@@ -187,10 +199,6 @@ class JoinMenuView(discord.ui.View):
         # Add back/exit
         for button_name in menu_button_dict["join"]:
             self.add_item(MenuButton(button_name))
-
-    async def on_timeout(self):
-        players.pop(self.user.id, None)
-
 
 class JoinMenuButton(discord.ui.Button):
     def __init__(self, game_name: str):
@@ -208,8 +216,7 @@ class JoinMenuButton(discord.ui.Button):
         else:
             await interaction.response.send_message(f"Joining {self.game_name} not supported yet.", ephemeral=True)
 
-
-# ------------------ Main Cog ------------------
+# ------------------ Cog ------------------
 class MainMenu(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -235,13 +242,14 @@ class MainMenu(commands.Cog):
         players[user.id] = arcadia_join_dict.copy()
         players[user.id]["name"] = user.display_name or user.name
 
+        view = MenuView(user)
         await interaction.response.send_message(
             "",
             embed=main_menu_embed(user.id),
-            view=MenuView(user),
+            view=view,
             ephemeral=True
         )
-
+        view.message = await interaction.original_response()
 
 async def setup(bot):
     await bot.add_cog(MainMenu(bot))
