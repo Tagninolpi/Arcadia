@@ -73,7 +73,6 @@ class ExitButton(discord.ui.Button):
 
         await interaction.response.edit_message(content="You have exited all games ✅", view=None)
 
-
 # ---------------- Connect 4 View ----------------
 class Connect4View(discord.ui.View):
     def __init__(self, user_id, game):
@@ -84,6 +83,7 @@ class Connect4View(discord.ui.View):
         active = game.get("active_players", [])
         waiting = game.get("waiting_players", [])
 
+        # Determine if user can join
         if user_id not in active and len(active) < 2:
             active.append(user_id)
             waiting.append(user_id)
@@ -92,13 +92,24 @@ class Connect4View(discord.ui.View):
             self.add_item(ExitButton(user_id=user_id))
             return
 
-        # Add Connect 4 buttons
+        # Add Connect 4 buttons (2-6 first row)
         for i in range(2, 7):
-            self.add_item(Connect4Button(label=str(i), row=0, view_ref=self))
-        self.add_item(Connect4Button(label="1", row=1, view_ref=self))
-        self.add_item(Connect4Button(label="7", row=1, view_ref=self))
+            button = Connect4Button(label=str(i), row=0, view_ref=self)
+            # Disable if column full
+            col_idx = i - 1
+            if all(slot != "⬜" for slot in game["game_state"]["state"][col_idx]):
+                button.disabled = True
+            self.add_item(button)
 
-        # Exit button
+        # Add buttons 1 and 7 on second row
+        for i in [1, 7]:
+            button = Connect4Button(label=str(i), row=1, view_ref=self)
+            col_idx = i - 1
+            if all(slot != "⬜" for slot in game["game_state"]["state"][col_idx]):
+                button.disabled = True
+            self.add_item(button)
+
+        # Exit button always
         self.add_item(ExitButton(user_id=user_id))
 
         # Update DB
