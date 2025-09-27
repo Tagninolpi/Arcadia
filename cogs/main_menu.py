@@ -51,11 +51,16 @@ class GameButton(discord.ui.Button):
         super().__init__(label=name, style=style, row=row)
 
     async def callback(self, interaction: discord.Interaction):
-        # Placeholder for Connect 4 view logic
-        await interaction.response.send_message(
-            f"Opening game `{self.label}`... (Connect 4 view goes here)",
-            ephemeral=True
-        )
+        # Find the Connect4 cog
+        connect4_cog = interaction.client.get_cog("Connect4")
+        if connect4_cog:
+            # Open Connect 4 view for this user
+            await connect4_cog.open_game(interaction, user_id=interaction.user.id)
+        else:
+            await interaction.response.send_message(
+                "Connect4 cog not loaded.", ephemeral=True
+            )
+
 
 
 class ExitButton(discord.ui.Button):
