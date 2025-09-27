@@ -51,6 +51,7 @@ class ArcadiaBot(commands.Bot):
         cogs_to_load = [
             "cogs.main_menu",
             "cogs.GameCleaner",
+            "cogs.Connect4",
         ]
 
         for cog in cogs_to_load:
