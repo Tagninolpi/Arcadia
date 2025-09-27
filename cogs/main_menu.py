@@ -4,7 +4,7 @@ from discord.ext import commands
 from bot.config import Config as c
 from cogs.db_helper import get_games, update_game
 
-
+c.players = {}
 # ------------------ Views & Buttons ------------------
 class GameMenuView(discord.ui.View):
     def __init__(self, user_id):
