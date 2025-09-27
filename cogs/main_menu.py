@@ -109,7 +109,7 @@ class MainMenu(commands.Cog):
                 "⚠️ You already have an active Arcadia session.",
                 ephemeral=True
             )
-            return
+            #return
 
         # Init player session
         c.players[interaction.user.id] = True
