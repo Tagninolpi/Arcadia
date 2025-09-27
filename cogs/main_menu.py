@@ -4,7 +4,6 @@ from discord.ext import commands
 from bot.config import Config as c
 from cogs.db_helper import get_games, update_game
 
-players = {}
 
 # ------------------ Views & Buttons ------------------
 class GameMenuView(discord.ui.View):
@@ -82,7 +81,7 @@ class ExitButton(discord.ui.Button):
                 update_game(g["id"], active_players=updated_players)
 
         # Remove player session and replace view
-        players.pop(self.user_id, None)
+        c.players.pop(self.user_id, None)
         await interaction.response.edit_message(
             content="You have exited all games. ✅",
             view=None
@@ -105,7 +104,7 @@ class MainMenu(commands.Cog):
             return
 
         # One session per user
-        if interaction.user.id in players:
+        if interaction.user.id in c.players:
             await interaction.response.send_message(
                 "⚠️ You already have an active Arcadia session.",
                 ephemeral=True
@@ -113,7 +112,7 @@ class MainMenu(commands.Cog):
             return
 
         # Init player session
-        players[interaction.user.id] = True
+        c.players[interaction.user.id] = True
 
         # Build embed
         embed = discord.Embed(
