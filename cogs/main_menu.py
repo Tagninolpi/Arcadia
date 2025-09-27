@@ -104,11 +104,11 @@ class MainMenu(commands.Cog):
             return
 
         # One session per user
-        if interaction.user.id in c.players:
-            await interaction.response.send_message(
-                "⚠️ You already have an active Arcadia session.",
-                ephemeral=True
-            )
+        #if interaction.user.id in c.players:
+         #   await interaction.response.send_message(
+          #      "⚠️ You already have an active Arcadia session.",
+           #     ephemeral=True
+            #)
             #return
 
         # Init player session
