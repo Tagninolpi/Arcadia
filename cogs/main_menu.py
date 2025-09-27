@@ -2,95 +2,81 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from bot.config import Config as c
+from cogs.db_helper import get_games, update_game
 
 players = {}
 
-def arcadia_embed(title: str, desc: str):
-    return discord.Embed(title=title, description=desc, color=discord.Color.blurple())
+# ------------------ Views & Buttons ------------------
+class GameMenuView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=None)
+        self.user_id = user_id
 
-class ArcadiaView(discord.ui.View):
-    def __init__(self, user: discord.User, timeout: int = 600):
-        super().__init__(timeout=timeout)
-        self.user = user
-        self.message: discord.Message | None = None
+    async def populate_buttons(self):
+        """Populate buttons based on current DB games."""
+        games = get_games()
+        self.clear_items()
 
-        # Decide what to show based on current menu
-        current_menu = players.get(user.id, {}).get("menu", "mainmenu")
+        # Track position for row assignment
+        buttons_added = 0
+        max_per_row = 5
+        max_rows = 5
 
-        if current_menu == "mainmenu":
-            self.add_item(self.CreateButton(self))
-            self.add_item(self.JoinButton(self))
-        elif current_menu in ("create", "join"):
-            self.add_item(self.MainMenuButton(self))
-        # If menu is a game (e.g. connect4), no menu buttons
+        for g in games:
+            if buttons_added >= max_per_row * max_rows:
+                break  # Limit to 25 buttons max
 
-        # Exit is always visible
-        self.add_item(self.ExitButton(self))
+            name = g["game_name"]
+            active_players = g.get("active_players", [])
+            state = g.get("game_state", {})
+            max_players = state.get("max_players", 2)
 
-    async def on_timeout(self):
-        players.pop(self.user.id, None)
-        if self.message:
-            await self.message.edit(
-                content="⏳ Session closed.",
-                embed=None,
-                view=None
-            )
+            if not active_players:
+                style = discord.ButtonStyle.gray
+            elif len(active_players) < max_players:
+                style = discord.ButtonStyle.green
+            else:
+                style = discord.ButtonStyle.red
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id != self.user.id:
-            await interaction.response.send_message("❌ This menu isn’t yours!", ephemeral=True)
-            return False
-        return True
+            row = buttons_added % max_per_row  # row is 0-4
+            self.add_item(GameButton(name=name, style=style, row=row))
+            buttons_added += 1
 
-    # ------------------ Buttons ------------------
-    class MainMenuButton(discord.ui.Button):
-        def __init__(self, parent: "ArcadiaView"):
-            super().__init__(label="Main Menu", style=discord.ButtonStyle.primary)
-            self.parent = parent
+        # Exit button always on last position (row 4)
+        self.add_item(ExitButton(user_id=self.user_id, row=max_rows - 1))
 
-        async def callback(self, interaction: discord.Interaction):
-            players[self.parent.user.id]["menu"] = "mainmenu"
-            embed = arcadia_embed("🎮 Main Menu", "Choose an option below:")
-            new_view = ArcadiaView(self.parent.user)
-            await interaction.response.edit_message(embed=embed, view=new_view)
-            new_view.message = await interaction.original_response()
 
-    class CreateButton(discord.ui.Button):
-        def __init__(self, parent: "ArcadiaView"):
-            super().__init__(label="Create", style=discord.ButtonStyle.success)
-            self.parent = parent
+class GameButton(discord.ui.Button):
+    def __init__(self, name, style, row=0):
+        super().__init__(label=name, style=style, row=row)
 
-        async def callback(self, interaction: discord.Interaction):
-            players[self.parent.user.id]["menu"] = "create"
-            embed = arcadia_embed("🛠️ Create Menu", "Here you could pick a game (e.g. Connect4).")
-            new_view = ArcadiaView(self.parent.user)
-            await interaction.response.edit_message(embed=embed, view=new_view)
-            new_view.message = await interaction.original_response()
+    async def callback(self, interaction: discord.Interaction):
+        # Placeholder for Connect 4 view logic
+        await interaction.response.send_message(
+            f"Opening game `{self.label}`... (Connect 4 view goes here)",
+            ephemeral=True
+        )
 
-    class JoinButton(discord.ui.Button):
-        def __init__(self, parent: "ArcadiaView"):
-            super().__init__(label="Join", style=discord.ButtonStyle.success)
-            self.parent = parent
 
-        async def callback(self, interaction: discord.Interaction):
-            players[self.parent.user.id]["menu"] = "join"
-            embed = arcadia_embed("📥 Join Menu", "Here you could join a game.")
-            new_view = ArcadiaView(self.parent.user)
-            await interaction.response.edit_message(embed=embed, view=new_view)
-            new_view.message = await interaction.original_response()
+class ExitButton(discord.ui.Button):
+    def __init__(self, user_id, row=0):
+        super().__init__(label="Exit", style=discord.ButtonStyle.red, row=row)
+        self.user_id = user_id
 
-    class ExitButton(discord.ui.Button):
-        def __init__(self, parent: "ArcadiaView"):
-            super().__init__(label="Exit", style=discord.ButtonStyle.danger)
-            self.parent = parent
+    async def callback(self, interaction: discord.Interaction):
+        # Remove player from active_players in all games
+        games = get_games()
+        for g in games:
+            if self.user_id in g.get("active_players", []):
+                updated_players = [p for p in g["active_players"] if p != self.user_id]
+                update_game(g["id"], active_players=updated_players)
 
-        async def callback(self, interaction: discord.Interaction):
-            players.pop(self.parent.user.id, None)
-            await interaction.response.edit_message(
-                content="👋 Arcadia closed.",
-                embed=None,
-                view=None
-            )
+        # Remove player session and replace view
+        players.pop(self.user_id, None)
+        await interaction.response.edit_message(
+            content="You have exited all games. ✅",
+            view=None
+        )
 
 
 # ------------------ Cog ------------------
@@ -116,14 +102,27 @@ class MainMenu(commands.Cog):
             )
             return
 
-        # Init player state with menu = mainmenu
-        players[interaction.user.id] = {"menu": "mainmenu"}
+        # Init player session
+        players[interaction.user.id] = True
 
-        # Show menu
-        view = ArcadiaView(interaction.user)
-        embed = arcadia_embed("🎮 Arcadia", "Choose an option below:")
+        # Build embed
+        embed = discord.Embed(
+            title="🎮 Welcome to Arcadia",
+            description=(
+                "Join a game:\n"
+                "• Gray: Empty game\n"
+                "• Green: Waiting for player\n"
+                "• Red: Full game (spectate only)"
+            ),
+            color=discord.Color.blurple()
+        )
+
+        # Build and populate view
+        view = GameMenuView(user_id=interaction.user.id)
+        await view.populate_buttons()
+
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-        view.message = await interaction.original_response()
+
 
 async def setup(bot):
     await bot.add_cog(MainMenu(bot))

@@ -6,9 +6,30 @@ from discord.ext import commands
 from bot.config import Config
 from keep_alive import keep_alive
 
+# Import DB functions and default games
+from cogs.db_helper import get_games, initialize_game
+from bot.default_games import DEFAULT_GAMES  # make sure you have a default_games.py
+
 # ---------------- Logging ----------------
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Arcadia")
+
+# ---------------- DB Initialization ----------------
+async def populate_empty_games():
+    """Check the DB and populate it with default games if empty."""
+    games = get_games()
+    if not games:
+        for game_name, game_state in DEFAULT_GAMES.items():
+            initialize_game(
+                game_name=game_name,
+                active_players=[],
+                waiting_players=[],
+                game_state=game_state
+            )
+        logger.info("✅ Initialized empty games table")
+    else:
+        logger.info("Games table already has entries, skipping initialization")
+
 
 # ---------------- Bot Class ----------------
 class ArcadiaBot(commands.Bot):
@@ -50,6 +71,12 @@ class ArcadiaBot(commands.Bot):
         logger.info(f"Bot is online as {self.user} ✅")
         logger.info(f"Connected to {len(self.guilds)} guild(s)")
 
+        # Initialize DB if empty
+        try:
+            await populate_empty_games()
+        except Exception as e:
+            logger.error(f"❌ Failed to populate games table: {e}")
+
         # Announce in your guild
         guild_id = 1369005976195436667
         channel_id = 1403721090622160977
@@ -64,6 +91,7 @@ class ArcadiaBot(commands.Bot):
                     await channel.send(f"Hello {member.mention}, Arcadia is now online! 🎮")
                 except Exception as e:
                     logger.error(f"❌ Failed to send online message: {e}")
+
 
 # ---------------- Main Entry ----------------
 async def main():
@@ -82,6 +110,7 @@ async def main():
         logger.info("Bot shutdown requested by user")
     finally:
         await bot.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
