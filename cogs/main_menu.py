@@ -54,12 +54,17 @@ class GameButton(discord.ui.Button):
         # Find the Connect4 cog
         connect4_cog = interaction.client.get_cog("Connect4")
         if connect4_cog:
-            # Open Connect 4 view for this user
-            await connect4_cog.open_game(interaction, user_id=interaction.user.id)
+            # Open Connect 4 view for this user, passing the game name
+            await connect4_cog.open_game(
+                interaction,
+                user_id=interaction.user.id,
+                game_name=self.label  # pass the button label as the game name
+            )
         else:
             await interaction.response.send_message(
                 "Connect4 cog not loaded.", ephemeral=True
             )
+
 
 
 
