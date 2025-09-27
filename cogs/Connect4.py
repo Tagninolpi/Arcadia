@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from bot.db import get_games, update_game
+from cogs.db_helper import get_games, update_game
 
 class Connect4Button(discord.ui.Button):
     def __init__(self, label, row, view_ref):
